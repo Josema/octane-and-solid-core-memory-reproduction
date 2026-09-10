@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "repro": "node run.mjs"
+    "start": "node run.mjs"
   },
   "dependencies": {
     "@solidjs/universal": "2.0.0-rc.0",

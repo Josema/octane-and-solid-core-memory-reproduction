@@ -58,7 +58,7 @@ function printTable(rows) {
   }
 }
 
-function printResults(results) {
+function printResultsMarkdown(results) {
   const metrics = [
     ['Cumulative JS allocation', stats => formatBytes(stats.allocatedBytes)],
     ['Sampled heap peak', stats => formatMiB(stats.peakSampledCapacity)],
@@ -69,13 +69,48 @@ function printResults(results) {
     ['Time in GC', stats => formatDuration(stats.gcMs)],
     ['Elapsed time', stats => formatDuration(stats.elapsedMs)],
   ];
-  const rows = [['Metric', ...results.map(result => result.label)]];
-  for (const [label, format] of metrics) {
-    rows.push([label, ...results.map(result => format(result.stats))]);
+
+  const headers = ['Metric', ...results.map(r => r.label)];
+  const dataRows = metrics.map(([label, format]) => [label, ...results.map(r => format(r.stats))]);
+  const allRows = [headers, ...dataRows].map(row => row.map(cell => String(cell)));
+
+  const colWidths = allRows[0].map((_, col) =>
+    Math.max(...allRows.map(row => row[col].length))
+  );
+
+  const headerLine = `| ${headers.map((h, i) => (i === 0 ? h.padEnd(colWidths[i]) : h.padStart(colWidths[i]))).join(' | ')} |`;
+  const separatorLine = `| ${colWidths
+    .map((w, i) => {
+      const dashes = '-'.repeat(Math.max(3, w));
+      return i === 0 ? dashes : (dashes.slice(0, -1) + ':');
+    })
+    .join(' | ')} |`;
+
+  const lines = [headerLine, separatorLine];
+  for (const row of dataRows) {
+    lines.push(
+      `| ${row
+        .map((cell, i) => (i === 0 ? String(cell).padEnd(colWidths[i]) : String(cell).padStart(colWidths[i])))
+        .join(' | ')} |`
+    );
   }
 
+  const now = new Date();
   console.log('\nResults\n');
-  printTable(rows);
+  console.log(lines.join('\n'));
+
+  // Format date like: 10 sept 2026, 17:56:25
+  const day = String(now.getDate()).padStart(2, '0');
+  const monthRaw = new Intl.DateTimeFormat('es-ES', { month: 'short' }).format(now);
+  const month = monthRaw.replace(/\.$/, '').toLowerCase();
+  const year = now.getFullYear();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  const localDate = `${day} ${month} ${year}, ${hh}:${mm}:${ss}`;
+
+  console.log('');
+  console.log(`[Date: ${localDate}]`);
 }
 
 function printProgress(label, record) {
@@ -227,7 +262,7 @@ async function main() {
   } finally {
     await fs.rm(temporaryDirectory, { recursive: true, force: true });
   }
-  printResults(results);
+  printResultsMarkdown(results);
 }
 
 main().catch(error => {
