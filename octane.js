@@ -7,8 +7,11 @@ import {
   universalFor,
   useState,
   useEffect,
-} from 'octane/universal/native';
+  // } from 'octane/universal/native';
+} from './octane/packages/octane/src/universal-native.js';
+
 import { ROW_COUNT, WRAPPER_COUNT } from './host.js';
+
 
 function createDriver(host) {
   const nodesById = new Map([[null, host.container]]);
@@ -68,7 +71,7 @@ function createDriver(host) {
             }
           }
         },
-        abort() {},
+        abort() { },
       };
     },
   };
