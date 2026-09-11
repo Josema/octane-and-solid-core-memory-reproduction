@@ -49,6 +49,19 @@ The test mounts 20 rows, each wrapped in four view components, and dispatches IT
 
 [Date: 10 sept 2026, 17:58:05]
 
+| Metric                   | Octane 0.2.8 | Solid 2.0.0-rc.6 |
+| ------------------------ | -----------: | ---------------: |
+| Cumulative JS allocation |      9.18 MB |          5.83 MB |
+| Sampled heap peak        |        8 MiB |            8 MiB |
+| Heap capacity after GC   |        8 MiB |            8 MiB |
+| Live JS after GC         |      0.94 MB |          0.37 MB |
+| Live JS after unmount    |      0.25 MB |          0.23 MB |
+| GC collections           |            7 |                6 |
+| Time in GC               |      0.55 ms |          0.20 ms |
+| Elapsed time             |     19.00 ms |         42.00 ms |
+
+[Date: 11 sept 2026, 17:22:02]
+
 ## node.js
 
 | Metric                               | Octane 0.2.6 | Solid 2.0.0-rc.6 |
@@ -78,3 +91,18 @@ The test mounts 20 rows, each wrapped in four view components, and dispatches IT
 | Elapsed time                         |    370.00 ms |         10.00 ms |
 
 [Date: 11 sept 2026, 07:28:29]
+
+---
+
+| Metric                               | Octane 0.2.8 | Solid 2.0.0-rc.6 |
+| ------------------------------------ | -----------: | ---------------: |
+| Cumulative JS allocation (estimated) |     10.78 MB |          4.59 MB |
+| Sampled heap peak                    |    11.78 MiB |         8.09 MiB |
+| Heap capacity after GC               |    11.28 MiB |         6.84 MiB |
+| Live JS after GC                     |      5.82 MB |          4.47 MB |
+| Live JS after unmount                |      5.33 MB |          4.33 MB |
+| GC collections                       |            5 |                5 |
+| Time in GC                           |      3.33 ms |          2.04 ms |
+| Elapsed time                         |     12.00 ms |         16.00 ms |
+
+[Date: 11 sept 2026, 17:22:31]

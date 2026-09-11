@@ -1,17 +1,11 @@
 import {
-  createUniversalRoot,
-  defineUniversalComponent,
-  universalPlan,
-  universalValue,
-  universalComponent,
-  universalFor,
-  useState,
-  useEffect,
-  // } from 'octane/universal/native';
-} from './octane/packages/octane/src/universal-native.js';
+  createUniversalRoot, defineUniversalComponent, universalPlan,
+  universalValue, universalComponent, universalFor,
+  universalHostBinding, useEffect,
+} from 'octane/universal/native';
+import { createScope } from 'octane/signals';
 
 import { ROW_COUNT, WRAPPER_COUNT } from './host.js';
-
 
 function createDriver(host) {
   const nodesById = new Map([[null, host.container]]);
@@ -79,6 +73,9 @@ function createDriver(host) {
 
 export function mount(host) {
   const driver = createDriver(host);
+  const scope = createScope({ scopeKey: 'native-hover-test' });
+  const selected$ = scope.signal$('selected', -1);
+
   const viewPlan = universalPlan(driver.id, {
     kind: 'host',
     type: 'view',
@@ -119,16 +116,15 @@ export function mount(host) {
 
   const App = defineUniversalComponent(driver.id, () => {
     host.counts.appRenders++;
-    const [activeRow, setActiveRow] = useState(-1);
     const rows = universalFor(
       Array.from({ length: ROW_COUNT }, (_, index) => index),
       index => index,
       index => universalComponent(driver.id, Row, {
         id: index,
-        active: index === activeRow,
+        active: universalHostBinding(selected$, value => value === index),
         onHover: () => {
           host.counts.eventCalls++;
-          setActiveRow(index);
+          selected$.set(index);
         },
       }),
     );
