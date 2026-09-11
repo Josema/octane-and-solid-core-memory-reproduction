@@ -9,7 +9,7 @@
   "dependencies": {
     "@solidjs/universal": "2.0.0-rc.0",
     "esbuild": "0.27.7",
-    "octane": "^0.2.7",
+    "octane": "^0.2.6",
     "solid-js": "2.0.0-rc.6"
   },
   "engines": {

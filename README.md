@@ -14,14 +14,12 @@ marks that metric as estimated.
 
 The test mounts 20 rows, each wrapped in four view components, and dispatches ITERATIONS=2000 simulated `hover` events. Each event selects a row by updating the active-row state. Both implementations produce the same host structure and property changes, and the test verifies that host nodes remain stable during updates and are cleaned up on unmount.
 
-## Hermes version
+## Hermes
 
 **Hermes 1.0.0, HBC 98**, built in **Release mode with the Hades garbage collector**:
 
 - **Tag:** `hermes-v250829098.0.10`
 - **Commit:** `becc964bd16002569bf74c4d8c190cfd2ad38985`
-
-## Results
 
 | Metric                   | Octane 0.2.6 | Solid 2.0.0-rc.6 |
 | ------------------------ | -----------: | ---------------: |
@@ -50,3 +48,33 @@ The test mounts 20 rows, each wrapped in four view components, and dispatches IT
 | Elapsed time             |       4.59 s |         39.00 ms |
 
 [Date: 10 sept 2026, 17:58:05]
+
+## node.js
+
+| Metric                               | Octane 0.2.6 | Solid 2.0.0-rc.6 |
+| ------------------------------------ | -----------: | ---------------: |
+| Cumulative JS allocation (estimated) |      3.01 GB |          4.87 MB |
+| Sampled heap peak                    |   383.98 MiB |         7.84 MiB |
+| Heap capacity after GC               |   336.23 MiB |         6.84 MiB |
+| Live JS after GC                     |     40.39 MB |          4.47 MB |
+| Live JS after unmount                |      4.72 MB |          4.33 MB |
+| GC collections                       |           81 |                5 |
+| Time in GC                           |    284.61 ms |          1.17 ms |
+| Elapsed time                         |    838.00 ms |          9.00 ms |
+
+[Date: 11 sept 2026, 07:28:53]
+
+---
+
+| Metric                               | Octane 0.2.7 | Solid 2.0.0-rc.6 |
+| ------------------------------------ | -----------: | ---------------: |
+| Cumulative JS allocation (estimated) |      1.94 GB |          4.88 MB |
+| Sampled heap peak                    |   169.23 MiB |         7.84 MiB |
+| Heap capacity after GC               |   169.73 MiB |         7.09 MiB |
+| Live JS after GC                     |     40.76 MB |          4.47 MB |
+| Live JS after unmount                |      5.53 MB |          4.33 MB |
+| GC collections                       |           85 |                5 |
+| Time in GC                           |     44.63 ms |          1.27 ms |
+| Elapsed time                         |    370.00 ms |         10.00 ms |
+
+[Date: 11 sept 2026, 07:28:29]
