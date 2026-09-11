@@ -19,14 +19,35 @@ const HERMES_FLAGS = [
   '-Xes6-proxy',
   '-Xes6-block-scoping',
 ];
+const RUNTIMES = new Set(['hermes', 'node']);
+
+function parseRuntime(arguments_) {
+  let runtime = 'hermes';
+  for (let index = 0; index < arguments_.length; index++) {
+    const argument = arguments_[index];
+    if (argument === '--runtime') {
+      runtime = arguments_[++index];
+    } else if (argument.startsWith('--runtime=')) {
+      runtime = argument.slice('--runtime='.length);
+    } else {
+      throw new Error(`Unknown argument: ${argument}`);
+    }
+  }
+  if (!RUNTIMES.has(runtime)) {
+    throw new Error(`Unknown runtime: ${runtime}. Expected hermes or node.`);
+  }
+  return runtime;
+}
 
 function formatBytes(bytes) {
+  if (bytes === null || bytes === undefined) return 'N/A';
   if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;
   return `${(bytes / 1e6).toFixed(2)} MB`;
 }
 
 function formatMiB(bytes) {
-  return `${bytes / (1024 * 1024)} MiB`;
+  const mebibytes = bytes / (1024 * 1024);
+  return `${Number.isInteger(mebibytes) ? mebibytes : mebibytes.toFixed(2)} MiB`;
 }
 
 function formatDuration(milliseconds) {
@@ -59,8 +80,11 @@ function printTable(rows) {
 }
 
 function printResultsMarkdown(results) {
+  const allocationLabel = results.some(result => result.stats.allocationEstimated)
+    ? 'Cumulative JS allocation (estimated)'
+    : 'Cumulative JS allocation';
   const metrics = [
-    ['Cumulative JS allocation', stats => formatBytes(stats.allocatedBytes)],
+    [allocationLabel, stats => formatBytes(stats.allocatedBytes)],
     ['Sampled heap peak', stats => formatMiB(stats.peakSampledCapacity)],
     ['Heap capacity after GC', stats => formatMiB(stats.capacityAfterGC)],
     ['Live JS after GC', stats => formatBytes(stats.liveAfterGC)],
@@ -119,16 +143,17 @@ function printProgress(label, record) {
   const percentage = Math.round(record.checkpoint / ITERATIONS * 100);
   const progress = [
     `  ${label}: ${completed} / ${total} events (${percentage}%)`,
-    `allocated ${formatBytes(record.allocated)}`,
-    `heap ${formatMiB(record.capacity)}`,
-  ].join(' | ');
+  ];
+  if (record.allocated !== null) progress.push(`allocated ${formatBytes(record.allocated)}`);
+  progress.push(`heap ${formatMiB(record.capacity)}`);
+  const message = progress.join(' | ');
 
   if (process.stdout.isTTY) {
     process.stdout.clearLine(0);
     process.stdout.cursorTo(0);
-    process.stdout.write(progress);
+    process.stdout.write(message);
   } else {
-    console.log(progress);
+    console.log(message);
   }
 }
 
@@ -143,8 +168,10 @@ async function readRecords(stdout, label) {
   return records;
 }
 
-async function runHermes(filename, label) {
-  const child = spawn(HERMES_PATH, [...HERMES_FLAGS, filename]);
+async function runRuntime(runtime, filename, label) {
+  const executable = runtime === 'hermes' ? HERMES_PATH : process.execPath;
+  const args = runtime === 'hermes' ? [...HERMES_FLAGS, filename] : ['--expose-gc', filename];
+  const child = spawn(executable, args);
   let stderr = '';
   child.stderr.setEncoding('utf8');
   child.stderr.on('data', chunk => {
@@ -155,7 +182,7 @@ async function runHermes(filename, label) {
     child.once('error', reject);
     child.once('close', resolve);
   });
-  // Consume output while Hermes runs, so its stdout pipe cannot fill up.
+  // Consume output while the benchmark runs, so its stdout pipe cannot fill up.
   const [exitCode, records] = await Promise.all([
     completion,
     readRecords(child.stdout, label),
@@ -198,19 +225,21 @@ async function loadFrameworks() {
   };
 }
 
-async function buildBenchmark(framework, aliases, temporaryDirectory) {
+async function buildBenchmark(runtime, framework, aliases, temporaryDirectory) {
+  const isNode = runtime === 'node';
   const bundle = await build({
     entryPoints: [path.join(DIRECTORY, 'entry.js')],
     absWorkingDir: DIRECTORY,
     bundle: true,
     write: false,
-    platform: 'browser',
-    format: 'iife',
-    target: 'es2018',
+    platform: isNode ? 'node' : 'browser',
+    format: isNode ? 'esm' : 'iife',
+    target: isNode ? 'node22' : 'es2018',
     minify: true,
     tsconfigRaw: { compilerOptions: { alwaysStrict: true } },
     alias: {
       'repro-framework': path.join(DIRECTORY, `${framework.name}.js`),
+      'repro-runtime': path.join(DIRECTORY, `runtime-${runtime}.js`),
       ...aliases,
     },
     define: {
@@ -221,15 +250,15 @@ async function buildBenchmark(framework, aliases, temporaryDirectory) {
     },
   });
 
-  const filename = path.join(temporaryDirectory, `${framework.name}.js`);
+  const filename = path.join(temporaryDirectory, `${framework.name}.${isNode ? 'mjs' : 'js'}`);
   await fs.writeFile(filename, bundle.outputFiles[0].text);
   return filename;
 }
 
-async function runBenchmark(framework, aliases, temporaryDirectory) {
-  const filename = await buildBenchmark(framework, aliases, temporaryDirectory);
+async function runBenchmark(runtime, framework, aliases, temporaryDirectory) {
+  const filename = await buildBenchmark(runtime, framework, aliases, temporaryDirectory);
   console.log(`Running ${framework.label}...`);
-  const stats = await runHermes(filename, framework.label);
+  const stats = await runRuntime(runtime, filename, framework.label);
 
   if (
     stats?.framework !== framework.name ||
@@ -242,22 +271,28 @@ async function runBenchmark(framework, aliases, temporaryDirectory) {
 }
 
 async function main() {
-  try {
-    await fs.access(HERMES_PATH, constants.X_OK);
-  } catch {
-    throw new Error(`Hermes is missing or not executable: ${HERMES_PATH}.`);
+  const runtime = parseRuntime(process.argv.slice(2));
+  if (runtime === 'hermes') {
+    try {
+      await fs.access(HERMES_PATH, constants.X_OK);
+    } catch {
+      throw new Error(`Hermes is missing or not executable: ${HERMES_PATH}.`);
+    }
   }
 
   const { frameworks, aliases } = await loadFrameworks();
   const labels = frameworks.map(framework => `${framework.label} ${framework.version}`);
-  console.log(`\n${labels.join(' / ')} — Hermes`);
+  const runtimeLabel = runtime === 'hermes'
+    ? 'Hermes'
+    : `Node.js ${process.versions.node} / V8 ${process.versions.v8}`;
+  console.log(`\n${labels.join(' / ')} — ${runtimeLabel}`);
   console.log(`${ITERATIONS.toLocaleString('en-US')} events per framework\n`);
 
   const temporaryDirectory = await fs.mkdtemp(path.join(tmpdir(), 'octane-vs-solid-'));
   const results = [];
   try {
     for (const framework of frameworks) {
-      results.push(await runBenchmark(framework, aliases, temporaryDirectory));
+      results.push(await runBenchmark(runtime, framework, aliases, temporaryDirectory));
     }
   } finally {
     await fs.rm(temporaryDirectory, { recursive: true, force: true });

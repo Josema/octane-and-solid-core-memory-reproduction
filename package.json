@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node run.mjs"
+    "hermes": "node run.mjs --runtime=hermes",
+    "node": "node run.mjs --runtime=node"
   },
   "dependencies": {
     "@solidjs/universal": "2.0.0-rc.0",

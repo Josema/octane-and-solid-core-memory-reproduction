@@ -1,7 +1,14 @@
+```sh
+npm run hermes
+npm run node
 ```
-npm install
-npm start
-```
+
+Each framework runs in a fresh process. The Node.js child process uses `--expose-gc`,
+`v8.getHeapStatistics()`, and `v8.GCProfiler` so the benchmark can force collections
+and report V8 heap and GC metrics. Node.js versions that do not expose
+`total_allocated_bytes` report cumulative allocation as an estimate derived from
+the heap retained before and after every recorded collection; the results table
+marks that metric as estimated.
 
 # What is
 
